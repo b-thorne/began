@@ -48,7 +48,7 @@ MANIFEST
 
 # Per-project virtualenvs
 .venv*/
-./envs/
+envs/
 
 # Editor caches
 

@@ -48,3 +48,8 @@ MANIFEST
 
 # Per-project virtualenvs
 .venv*/
+./envs/
+
+# Editor caches
+
+.vscode/

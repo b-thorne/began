@@ -9,6 +9,8 @@ dependencies:
   - scipy
   - pandas
   - ipython
+  - namaster
+  - healpy
   - tqdm
   - click
   - matplotlib

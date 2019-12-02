@@ -10,6 +10,9 @@ dependencies:
   - pandas
   - ipython
   - namaster
+  - numba
+  - scikit-image
+  - toml
   - healpy
   - tqdm
   - click
@@ -20,6 +23,8 @@ dependencies:
   - pip:
      # add here only pip-packages that are not available in conda/conda-forge! E.g.:
      - optuna
+     - tensorflow_probability
+     - tables
   # for development only (could also be kept in a separate environment file)
   - jupyterlab
   - pytest

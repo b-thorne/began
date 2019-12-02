@@ -2,7 +2,107 @@ import os
 import numpy as np
 import healpy as hp
 import h5py
+from pathlib import Path
 import matplotlib.pyplot as plt
+
+
+class FlatCutter(object):
+    """ Object to control the extraction of flat patches from a given HEALPix 
+    map.
+
+    Object is initialized with parameters defining the geometry of the patch:
+    its length in degrees, and the number of pixels in each direction. 
+    The `rotate_and_interpolate` method defines a grid centered at (0, 0)
+    of dimensions corresponding to `xlen`, `ylen`, and rotates it to the 
+    point (lon, lat). The value of the map at the resulting grid of longitudes 
+    and latitudes is then determined by interpolation. 
+    """
+    def __init__(self, xlen, ylen, xres, yres):
+        self.xres = xres
+        self.yres = yres
+        self.xarr = np.linspace(-xlen, xlen, xres)
+        self.yarr = np.linspace(-ylen, ylen, yres)
+        xgrid, ygrid = np.meshgrid(self.xarr, self.yarr)
+        self.xgrid_points = xgrid.ravel()
+        self.ygrid_points = ygrid.ravel()
+        return
+    
+    def rotate_and_interpolate(self, rot, ma, coord='G'):
+        """ Method to rotate the grid at (0, 0) to `rot=(lon, lat)`, and sample
+        the map at the grid points by interpolation.
+
+        Parameters
+        ----------
+        rot: tuple(float)
+            Tuple containing two numbers, the longitude and latitude of the
+            point to be rotated to, in degrees.
+        ma: ndarray
+            Healpix map from which the interpolation is to be made.
+        coord: string (optional, default "G")
+            The coordinate system in which the HEALPix map is provided.
+        """
+        # define a rotation object that can take an input unit vector, or
+        # (lon, lat) pair.
+        r = hp.Rotator(rot=rot, coord=coord, deg=True)
+        lon_grid, lat_grid = r(self.xgrid_points, self.ygrid_points, 
+                                lonlat=True, inv=True)
+        return hp.get_interp_val(ma, lon_grid, lat_grid, lonlat=True).reshape((self.xres, self.yres))
+
+class CartProj(object):
+    """ Object to carry out the division of a map into rectangular subpatches and project to a 
+    Cartesian grid.
+    """
+    def __init__(self, map_fpath, lonra=[-10, 10], latra=[-10, 10], xsize=800, ysize=800, field=(0)):
+        try:
+            assert isinstance(map_fpath, Path)
+        except TypeError:
+            raise TypeError("File path must be instance of `pathlib.Path`")
+        self.map_fpath = map_fpath
+        self.map = hp.read_map(str(self.map_fpath), field=field)
+        # longitude range in degrees
+        self.lonra = lonra
+        # latitude range in degrees
+        self.latra = latra
+        # x-resolution 
+        self.xsize = xsize
+        # y-resolution
+        self.ysize = ysize
+        return
+    
+    def __call__(self, rot):
+        """ Method to project a point at `rot`=(lon, lat) to the equator and then project
+        into a Cartesian grid. The rotation prevents a latitude-dependent projection bias,
+        and the `plt.close` method closes the matplotlib axes created by the `hp.cartview`
+        function.
+        
+        Parameters
+        ----------
+        rot: tuple(float)
+            Tuple containing two floats denoting the longitude and latitude of the point
+            about which to cut project a rectangular region spanning `self.lonra` in
+            longitude and `self.latra` in latitude. Unit expected is degrees.
+            
+        Returns
+        -------
+        ndarray
+            Two-dimensional numpy array containing a cutout of `self.map`.
+            
+        Notes
+        -----
+            The cartview function opens a figure which is then closed, it would be nice
+            to not go through this process and extract the healpy function that does the
+            cutting. 
+            
+            Cartview expects `rot` in units of degrees, and `lonra` and `latra` in degrees.
+            
+            `latra` is expected to be a true `latitude`, in that it ranges from -90 to
+            +90, rather than the co-latitude that is used in some functions. For example
+            `hp.ang2pix` would expect co-latitude by default.
+        """
+        img = np.asarray(hp.cartview(self.map, rot=rot, return_projected_map=True, xsize=self.xsize, 
+                          ysize=self.ysize, lonra=self.lonra, latra=self.latra))
+        plt.close()
+        return img
 
 def get_patches(npatches):
     """ Function to split a given HEALPix map into flat sky projections of

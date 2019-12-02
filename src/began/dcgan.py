@@ -4,6 +4,7 @@ A GAN consists of two logically separate networks, a discriminator and a
 generator. These train antagonistically, and it makes sense to keep them
 separate from a code point of view. 
 """
+import tensorflow as tf
 import tensorflow.keras.layers as lyr
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import Adam
@@ -158,7 +159,7 @@ def build_adversarial_model(discriminator, generator):
 
 
 def training_schedule(discriminator, generator, adversarial_model, training_data,
-    latent_dim=32, train_steps=256, batch_size=256):
+    latent_dim=32, train_steps=256, batch_size=256, callback=False):
     """ Function to execute a training schedule for the GAN. 
 
     Each iteration of the GAN training process consists of two steps:
@@ -180,7 +181,10 @@ def training_schedule(discriminator, generator, adversarial_model, training_data
     epochs: int
         Number of epochs (passes through whole data set) to train.
     """
+    image_lat = np.random.randn(1, latent_dim)
     for step in range(train_steps):
+        if callback:
+            tf.summary.experimental.set_step(step)
         # First train the discriminator with correct labels
         # Randomly select batch from training samples
         y_real = np.random.binomial(1, 0.99, size=[batch_size, 1])
@@ -198,8 +202,9 @@ def training_schedule(discriminator, generator, adversarial_model, training_data
         images_fake = generator.predict(noise)
 
         # Train the discriminator on real and fake images.
-        _ = discriminator.train_on_batch(images_real, y_real)
-        _ = discriminator.train_on_batch(images_fake, y_fake)
+        real_loss = discriminator.train_on_batch(images_real, y_real)
+        fake_loss = discriminator.train_on_batch(images_fake, y_fake)
+        d_loss = 0.5 * (real_loss + fake_loss)
         # Now train the adversarial network.
         # Create new fake images, and label as if they are from the training set.
         # Lie indicates that we are tricking the adversarial network by
@@ -208,5 +213,9 @@ def training_schedule(discriminator, generator, adversarial_model, training_data
         y_lie = np.ones([batch_size, 1])
         noise = np.random.normal(loc=0., scale=1., size=[batch_size, latent_dim])
         a_loss = adversarial_model.train_on_batch(noise, y_lie)
+        if callback:
+            tf.summary.image('random_draw', generator.predict(image_lat))
+            tf.summary.scalar('aloss', a_loss)
+            tf.summary.scalar('dloss', d_loss)
         print("Step number {:05d} of {:d}, GAN loss is {:.03f}".format(step, train_steps, a_loss))
     return adversarial_model

@@ -2,6 +2,28 @@
 
 Add a short description here!
 
+## Tensorboard on remote
+
+In order to display tensorboard for a remote run of the code we need to `ssh` into the machine and forward a local port to the port on the server we will be using. To do this use the `-L` flag with `ssh`:
+
+```bash
+ssh -L localPort:127.0.0.1:remotePort user@server
+```
+
+In our case this is:
+
+```bash
+ssh -L 16006:127.0.0.1:6006 bthorne@comet.sdsc.edu
+```
+
+and in the initiated `ssh` session I run:
+
+```bash
+tensorboard --logdir=$TF_LOGDIR
+```
+
+which will send the tensorboard service to the default port of 6006. If we wanted to use a different port we could, but this needs to match the port specified in the `ssh` connection.
+
 ## Description
 
 A longer description of your project goes here...

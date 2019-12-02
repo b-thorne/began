@@ -16,7 +16,7 @@ __pycache__/*
 
 # Logging files
 notebooks/logs/*
-
+logs/*
 # Project files
 .ropeproject
 .project

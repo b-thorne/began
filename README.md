@@ -2,6 +2,70 @@
 
 Add a short description here!
 
+## Installation
+
+This package is supplied with a `conda` environment that will install all of the required packages:
+
+```bash
+conda env create -f environment.yaml --prefix=/path/to/project/envs
+```
+
+Activate with:
+
+```bash
+conda activate /path/to/project/envs
+```
+
+And install the package:
+
+```bash
+python setup.py install
+```
+
+## Comet software
+
+Here we add some notes about running code on the GPU nodes of the Comet cluster. This will have both generally applicable tools (such as Jupyter lab being run on a compute node), and Comet-specific notes.
+
+### Singularity
+
+`Singularity` is a container tool for HPC environments, similar to Docker. This was originally convenient to use on Comet, as the most up-to-date CUDA libraries, required to support `tensorflow-2.0`, were not available, and `Singularity` could be used to download pre-made images from Docker with the correct software and run them on Comet. Since the update of 12/03/2019, this is no longer necessary as CUDA 10.1 will be the default library, which supports `tensorflow-2.0`. 
+
+### Jupyter-Lab
+
+First establish the Python environment to use, and ensure `jupyter-lab` is installed. In this project we have the `began` `conda` environment. 
+
+#### Jupyter on interactive jobs
+
+#### Jupyter as an `sbatch` job
+
+#### Jupyter on login nodes
+
+This is usually best avoided for computational work. 
+
+### Tensorboard
+
+### SSH
+
+It is generally recommended to `ssh` to the SSO hub by the XSEDE manual:
+
+```bash
+ssh -l bthorne login.xsede.org
+```
+
+and then to `gsissh` into Comet:
+
+```bash
+gsissh comet
+```
+
+However, it will generally be easier for us to `ssh` directly into comet, in order to include the port forwarding we use to connect to servers being run on Comet:
+
+```bash
+ssh -l bthorne comet.sdsc.edu -L (port forwarding options)
+```
+
+
+
 ## Tensorboard on remote
 
 In order to display tensorboard for a remote run of the code we need to `ssh` into the machine and forward a local port to the port on the server we will be using. To do this use the `-L` flag with `ssh`:

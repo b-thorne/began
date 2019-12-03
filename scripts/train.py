@@ -55,7 +55,8 @@ if __name__ == '__main__':
     # Apply preprocessing to scale data
     X_TRAIN = X_TRAIN.reshape(X_TRAIN.shape[0], 28, 28, 1).astype('float32')
     X_TRAIN = (X_TRAIN - 127.5) / 127.5
-    train_dataset = tf.data.Dataset.from_tensor_slices(X_TRAIN).shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
-    trained_model = training_schedule(DIS, GEN, ADV, X_TRAIN,
+    TRAIN_DSET = tf.data.Dataset.from_tensor_slices(X_TRAIN).shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
+    
+    trained_model = training_schedule(DIS, GEN, ADV, TRAIN_DSET,
         LATENT_DIM, BUFFER_SIZE, BATCH_SIZE, callback=True)
     trained_model.save(os.fspath(MODEL_PATH))

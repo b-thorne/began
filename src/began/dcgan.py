@@ -158,7 +158,7 @@ def build_adversarial_model(discriminator, generator):
     return model
 
 
-def training_schedule(discriminator, generator, adversarial_model, training_data,
+def training_schedule(discriminator, generator, adversarial_model, training_dataset,
     latent_dim=32, train_steps=256, batch_size=256, callback=False):
     """ Function to execute a training schedule for the GAN. 
 
@@ -182,28 +182,21 @@ def training_schedule(discriminator, generator, adversarial_model, training_data
         Number of epochs (passes through whole data set) to train.
     """
     image_lat = np.random.randn(1, latent_dim)
-    for step in range(train_steps):
+    for step, image_batch in enumerate(training_dataset):
         if callback:
             tf.summary.experimental.set_step(step)
         # First train the discriminator with correct labels
         # Randomly select batch from training samples
         y_real = np.random.binomial(1, 0.99, size=[batch_size, 1])
         y_fake = np.random.binomial(1, 0.01, size=[batch_size, 1])
-        idx = np.random.randint(0, training_data.shape[0], size=batch_size)
-        
-        # Rotate each image by random integer multiples of 90 degrees. This should
-        # probably be transfereed out of this code to be done in the data preparation
-        # stage. 
-        images_real = training_data[idx, ...]
-        images_real = np.array([np.rot90(im, np.random.randint(0, 4)) for im in images_real])
 
         # Use `generator` to create fake images.
         noise = np.random.normal(loc=0., scale=1., size=[batch_size, latent_dim])
-        images_fake = generator.predict(noise)
+        fake_images = generator.predict(noise)
 
         # Train the discriminator on real and fake images.
-        real_loss = discriminator.train_on_batch(images_real, y_real)
-        fake_loss = discriminator.train_on_batch(images_fake, y_fake)
+        real_loss = discriminator.train_on_batch(image_batch, y_real)
+        fake_loss = discriminator.train_on_batch(fake_images, y_fake)
         d_loss = 0.5 * (real_loss + fake_loss)
         # Now train the adversarial network.
         # Create new fake images, and label as if they are from the training set.

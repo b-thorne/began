@@ -1,4 +1,4 @@
-name: began
+name: began-gpu
 channels:
   - defaults
   - conda-forge

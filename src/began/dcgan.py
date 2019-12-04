@@ -159,7 +159,7 @@ def build_adversarial_model(discriminator, generator):
 
 
 def training_schedule(discriminator, generator, adversarial_model, training_dataset,
-    latent_dim=32, callback=False):
+    latent_dim=32, epochs=50, callback=False):
     """ Function to execute a training schedule for the GAN. 
 
     Each iteration of the GAN training process consists of two steps:
@@ -182,34 +182,36 @@ def training_schedule(discriminator, generator, adversarial_model, training_data
         Number of epochs (passes through whole data set) to train.
     """
     image_lat = np.random.randn(1, latent_dim)
-    for step, image_batch in enumerate(training_dataset):
-        if callback:
-            tf.summary.experimental.set_step(step)
-        batch_size = len(image_batch)
-        # First train the discriminator with correct labels
-        # Randomly select batch from training samples
-        y_real = np.random.binomial(1, 0.99, size=[batch_size, 1])
-        y_fake = np.random.binomial(1, 0.01, size=[batch_size, 1])
+    for epoch in epochs:
+        print("Epoch: ", epoch)
+        for step, image_batch in enumerate(training_dataset):
+            if callback:
+                tf.summary.experimental.set_step(step)
+            batch_size = len(image_batch)
+            # First train the discriminator with correct labels
+            # Randomly select batch from training samples
+            y_real = np.random.binomial(1, 0.99, size=[batch_size, 1])
+            y_fake = np.random.binomial(1, 0.01, size=[batch_size, 1])
 
-        # Use `generator` to create fake images.
-        noise = np.random.normal(loc=0., scale=1., size=[batch_size, latent_dim])
-        fake_images = generator.predict(noise)
+            # Use `generator` to create fake images.
+            noise = np.random.normal(loc=0., scale=1., size=[batch_size, latent_dim])
+            fake_images = generator.predict(noise)
 
-        # Train the discriminator on real and fake images.
-        real_loss = discriminator.train_on_batch(image_batch, y_real)
-        fake_loss = discriminator.train_on_batch(fake_images, y_fake)
-        d_loss = 0.5 * (real_loss + fake_loss)
-        # Now train the adversarial network.
-        # Create new fake images, and label as if they are from the training set.
-        # Lie indicates that we are tricking the adversarial network by
-        # telling it the target is valid, when in reality the discriminator
-        # is being fed fake images by the generator.
-        y_lie = np.ones([batch_size, 1])
-        noise = np.random.normal(loc=0., scale=1., size=[batch_size, latent_dim])
-        a_loss = adversarial_model.train_on_batch(noise, y_lie)
-        if callback:
-            tf.summary.image('random_draw', generator.predict(image_lat))
-            tf.summary.scalar('aloss', a_loss)
-            tf.summary.scalar('dloss', d_loss)
-        print("Step number {:05d}, GAN loss is {:.03f}".format(step, a_loss))
+            # Train the discriminator on real and fake images.
+            real_loss = discriminator.train_on_batch(image_batch, y_real)
+            fake_loss = discriminator.train_on_batch(fake_images, y_fake)
+            d_loss = 0.5 * (real_loss + fake_loss)
+            # Now train the adversarial network.
+            # Create new fake images, and label as if they are from the training set.
+            # Lie indicates that we are tricking the adversarial network by
+            # telling it the target is valid, when in reality the discriminator
+            # is being fed fake images by the generator.
+            y_lie = np.ones([batch_size, 1])
+            noise = np.random.normal(loc=0., scale=1., size=[batch_size, latent_dim])
+            a_loss = adversarial_model.train_on_batch(noise, y_lie)
+            if callback:
+                tf.summary.image('random_draw', generator.predict(image_lat))
+                tf.summary.scalar('aloss', a_loss)
+                tf.summary.scalar('dloss', d_loss)
+            print("Step number {:05d}, GAN loss is {:.03f}".format(step, a_loss))
     return adversarial_model

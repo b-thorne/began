@@ -159,7 +159,7 @@ def build_adversarial_model(discriminator, generator):
 
 
 def training_schedule(discriminator, generator, adversarial_model, training_dataset,
-    latent_dim=32, train_steps=256, batch_size=256, callback=False):
+    latent_dim=32, callback=False):
     """ Function to execute a training schedule for the GAN. 
 
     Each iteration of the GAN training process consists of two steps:
@@ -185,6 +185,7 @@ def training_schedule(discriminator, generator, adversarial_model, training_data
     for step, image_batch in enumerate(training_dataset):
         if callback:
             tf.summary.experimental.set_step(step)
+        batch_size = len(image_batch)
         # First train the discriminator with correct labels
         # Randomly select batch from training samples
         y_real = np.random.binomial(1, 0.99, size=[batch_size, 1])
@@ -210,5 +211,5 @@ def training_schedule(discriminator, generator, adversarial_model, training_data
             tf.summary.image('random_draw', generator.predict(image_lat))
             tf.summary.scalar('aloss', a_loss)
             tf.summary.scalar('dloss', d_loss)
-        print("Step number {:05d} of {:d}, GAN loss is {:.03f}".format(step, train_steps, a_loss))
+        print("Step number {:05d}, GAN loss is {:.03f}".format(step, a_loss))
     return adversarial_model

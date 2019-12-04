@@ -36,6 +36,34 @@ First establish the Python environment to use, and ensure `jupyter-lab` is insta
 
 #### Jupyter on interactive jobs
 
+These instructions work as of 12/03/2019. For a similar set of instructions on Bridges, see [these notes](https://gist.github.com/mcburton/d80e4395cd82737d3677c570aa31ee40).
+
+1. On Comet, request an interactive GPU allocation. 
+
+2. On the GPU node check the host name using:
+
+```bash
+hostname -f
+```
+
+This will be used later to setup `ssh` forwarding from your local machine to the compute node.
+
+3. Next run the `jupyter-lab` server, specifying the following options:
+
+```bash
+jupyter-lab --no-browser --ip=0.0.0.0
+```
+
+This should start the server running, and you will have been allocated a port, e.g.:
+
+```bash
+Notebook server running at http://127.0.0.1:8
+```
+
+4. Setup `ssh` forwarding from a local port to the port on the GPU node.
+
+
+
 #### Jupyter as an `sbatch` job
 
 #### Jupyter on login nodes

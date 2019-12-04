@@ -1,3 +1,6 @@
+""" This module implements variational autoencoder models in tensorflow / keras.
+"""
+
 import tensorflow.keras as keras
 import numpy as np 
 

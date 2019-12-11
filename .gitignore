@@ -14,6 +14,9 @@ __pycache__/*
 */.ipynb_checkpoints/*
 .DS_Store
 
+# Conda environment
+envs-gpu/
+
 # Logging files
 notebooks/logs/*
 logs/*

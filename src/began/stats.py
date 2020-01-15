@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.linalg import sqrtm
+import pymaster as nmt
 import matplotlib.pyplot as plt
 
 class StatsError(Exception):
@@ -108,6 +109,83 @@ def pixel_intensity_histogram(arr, nbins, hist_range=None, normed=False):
     return np.histogram(arr, nbins, range=hist_range, normed=normed)
 
 
+def batch_00_autospectrum(ma, spanx, spany, mask, nmtbin, wsp):
+    """ This is a function to calculate a batch estimate of the power
+    spectrum for a set of flat-sky maps. It uses NaMaster to do all
+    of the calculations of power spectra and mode coupling.
+
+    This can be called with an existing `pymaster.NmtWorkspace`
+    object, such that the mode coupling does not have to be calculated
+    for each map.
+
+    Parameters
+    ----------
+    ma: ndarray
+        Numpy array with three dimensions corresponding to (NBATCH,
+        XRES, YRES).
+    spanx, spany: float
+        Dimensions of the map in radians
+    mask: ndarray
+        Mask of same shape as map.
+    wsp: `pymaster.NmtWorkspace` object
+        Instance of a pymaster.NmtWorkspace object containing the
+        mode coupling matrix.
+
+    Returns
+    -------
+    ndarray
+        Numpy array containing the power spectra, of shape (NBATCH
+        N_BANDS).
+    """
+    _assertNdim(ma, 3)
+    return np.array(list(map(map_to_00_autospectrum(ma, spanx, spany, mask, nmtbin, wsp))))
+
+
+def map_to_00_autospectrum(ma, spanx, spany, mask, nmtbin, wsp):
+    """ Function to calculate the auto spectrum of a given map, given
+    the angular range it spans, a mask, a binning scheme, and a
+    pre-computed mode coupling matrix.
+
+    Parameters
+    ----------
+    ma: ndarray
+        A two-dimensional numpy array.
+    spanx, spany: float
+        The angular distance spanned in the x and y directions respectively.
+    mask: ndarray
+        A two-dimensional numpy array containing the mask to be applied
+        to the `ma` map.
+    nmtbin: pymaster.NmtBinFlat object
+        Instance of the Namaster flat sky binning object.
+    wsp: pymaster.NmtWorkspaceFlat
+        Instance of the Namaster flat sky workspace object with a precomputed
+        mode coupling matrix.
+
+    Returns
+    -------
+    ndarray
+        The auto spectrum of the input map `ma`.
+    """
+    f0 = nmt.NmtFieldFlat(spanx, spany, mask, [ma])
+    return wsp.decouple_cell(nmt.compute_coupled_cell_flat(f0, f0, nmtbin))
+
+
+def dimensions_to_nmtbin(npix_x, npix_y, spanx, spany):
+    """ Function to create a pymaster.NmtBinFlat object from the
+    dimensions of a given map.
+
+    Parameters
+    ----------
+    npix_x, npix_y: float
+        Number of pixels along the x and y dimensions respectively.
+    spanx, spanx: float
+        The physical angular range spanned by each dimension in radians.
+    """
+    l0_bins = np.arange(npix_x / 8.) * 8 * np.pi / spanx
+    lf_bins = (np.arange(npix_x / 8.) + 1.) * 8. * np.pi / spany
+    return nmt.NmtBinFlat(l0_bins, lf_bins)
+
+
 """ The following are functions used to check inputs for the above functions.
 Some subset of these were copied directly from `numpy`, and the others are 
 novel.
@@ -116,9 +194,15 @@ def _assertOneD(arr):
     if arr.ndim != 1:
         raise StatsError("Array must be one dimensional")
 
+
 def _assertRankTwo(mat):
     if mat.ndim != 2:
         raise StatsError("Matrix must be rank two to calculate square root")
+
+
+def _assertNdim(ma, ndim):
+    if ma.ndim != ndim:
+        raise StatsError("Array must have {:d} dimensions.".format(ndim))
 
 
 def _assertPositiveSemiDefinite(mat):

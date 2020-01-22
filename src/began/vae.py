@@ -59,6 +59,33 @@ def make_vae_generative_net(latent_dim):
     model.add(tf.keras.layers.Conv2DTranspose(filters=1, kernel_size=5, strides=(1, 1), padding="SAME"))
     return model
 
+def make_vae_inception_net(latend_dim):
+    model = tf.keras.Sequential(name='Decoder')
+    
+    model.add(tf.keras.layers.InputLayer(input_shape=(latent_dim,)))
+    model.add(tf.keras.layers.Dense(units=16*16*32, activation=tf.nn.relu))
+    model.add(tf.keras.layers.Reshape(target_shape=(16, 16, 32)))
+    assert model.output_shape == (None, 16, 16, 32)
+    
+    model.add(tf.keras.layers.BatchNormalization(momentum=0.9))
+    model.add(tf.keras.layers.Conv2DTranspose(filters=64, kernel_size=5, strides=(2, 2), padding="SAME", activation='relu'))
+    assert model.output_shape == (None, 32, 32, 64)
+    
+    model.add(tf.keras.layers.BatchNormalization(momentum=0.9))
+    model.add(tf.keras.layers.Conv2DTranspose(filters=64, kernel_size=5, strides=(2, 2), padding="SAME", activation='relu'))
+    assert model.output_shape == (None, 64, 64, 64)
+    
+    model.add(tf.keras.layers.BatchNormalization(momentum=0.9))
+    model.add(tf.keras.layers.Conv2DTranspose(filters=64, kernel_size=5, strides=(2, 2), padding="SAME", activation='relu'))
+    assert model.output_shape == (None, 128, 128, 64)
+    
+    model.add(tf.keras.layers.BatchNormalization(momentum=0.9))
+    model.add(tf.keras.layers.Conv2DTranspose(filters=64, kernel_size=5, strides=(2, 2), padding="SAME", activation='relu'))
+    assert model.output_shape == (None, 256, 256, 64)
+    
+    model.add(tf.keras.layers.Conv2DTranspose(filters=1, kernel_size=5, strides=(1, 1), padding="SAME"))
+    return model
+
 def make_vae_inference_net(latent_dim):
     model = tf.keras.Sequential(name='Encoder')
     

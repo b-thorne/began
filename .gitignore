@@ -14,12 +14,16 @@ __pycache__/*
 */.ipynb_checkpoints/*
 .DS_Store
 
-# Conda environment
-envs-gpu/
-
 # Logging files
 notebooks/logs/*
 logs/*
+
+# Plots and images
+notebooks/plots/**/*
+**/*.gif
+**/*.pdf
+**/*.png
+
 # Project files
 .ropeproject
 .project
@@ -55,6 +59,7 @@ MANIFEST
 # Per-project virtualenvs
 .venv*/
 envs/
+envs-gpu/
 
 # Editor caches
 

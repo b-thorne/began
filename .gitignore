@@ -16,6 +16,7 @@ __pycache__/*
 
 # Logging files
 notebooks/logs/*
+notebooks/training_checkpoints/*
 logs/*
 
 # Plots and images

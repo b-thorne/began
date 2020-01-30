@@ -21,7 +21,6 @@ _logger = logging.getLogger(__name__)
 @click.option('--quiet', 'log_level', flag_value=logging.WARNING, default=True)
 @click.option('-v', '--verbose', 'log_level', flag_value=logging.INFO)
 @click.option('-vv', '--very-verbose', 'log_level', flag_value=logging.DEBUG)
-@click.version_option(began.__version__)
 def main(cfg_path: Path, log_level: int):
     logging.basicConfig(stream=sys.stdout,
                         level=log_level,
@@ -29,7 +28,9 @@ def main(cfg_path: Path, log_level: int):
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     # YOUR CODE GOES HERE! Keep the main functionality in src/began
     # est = began.models.Estimator()
-
+    print(cfg_path)
+    print(type(cfg_path))
 
 if __name__ == '__main__':
+    print(list(cfg.all_contents()))
     main()

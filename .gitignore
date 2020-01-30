@@ -14,6 +14,10 @@ __pycache__/*
 */.ipynb_checkpoints/*
 .DS_Store
 
+
+# Data files
+models/*.h5
+
 # Logging files
 notebooks/logs/*
 notebooks/training_checkpoints/*

@@ -41,6 +41,11 @@ _logger = logging.getLogger(__name__)
 @click.option('-v', '--verbose', 'log_level', flag_value=logging.INFO)
 @click.option('-vv', '--very-verbose', 'log_level', flag_value=logging.DEBUG)
 def main(cfg_path: Path, train_path: Path, model_path: Path, plot_dir: Path, seed: int, log_level: int):
+    # initialize random seed in numpy
+    np.random.seed(seed)
+    # initialize random seed in tensorflow
+    tf.random.set_seed(seed)
+    
     logging.basicConfig(stream=sys.stdout,
                         level=log_level,
                         datefmt='%Y-%m-%d %H:%M',
@@ -77,12 +82,13 @@ def main(cfg_path: Path, train_path: Path, model_path: Path, plot_dir: Path, see
     test_dataset = dataset.take(100) 
     train_dataset = dataset.skip(100)
 
+
     optimizer = tf.keras.optimizers.Adam(beta_1=0.5, learning_rate=0.001)
     model = began.CVAE(LAT_DIM)
 
     # keeping the random vector constant for generation (prediction) so
     # it will be easier to see the improvement.
-    np.random.seed(seed)
+    
     random_vector_for_generation = tf.random.normal(shape=[NUM_EXAMPLES_TO_GENERATE, LAT_DIM])
     for epoch in range(1, EPOCHS + 1):
         print("Epoch: ", epoch)
@@ -96,6 +102,7 @@ def main(cfg_path: Path, train_path: Path, model_path: Path, plot_dir: Path, see
             for test_x in test_dataset:
                 loss(began.vae.compute_loss(model, test_x))
             elbo = -loss.result()
+            print("Loss: ", elbo)
             
             with summary_writer.as_default():
                 tf.summary.scalar('elbo', elbo, step=epoch)

@@ -79,7 +79,7 @@ def main(cfg_path: Path, train_path: Path, model_path: Path, plot_dir: Path, see
     # Batch and shuffle the data
     train_images = np.load(train_path).astype(np.float32)
     dataset = tf.data.Dataset.from_tensor_slices(train_images).shuffle(train_images.shape[0]).batch(BATCH_SIZE)
-    test_dataset = dataset.take(100) 
+    test_dataset = dataset.take(100)
     train_dataset = dataset.skip(100)
 
 
@@ -102,7 +102,7 @@ def main(cfg_path: Path, train_path: Path, model_path: Path, plot_dir: Path, see
             for test_x in test_dataset:
                 loss(began.vae.compute_loss(model, test_x))
             elbo = -loss.result()
-            print("Loss: ", elbo)
+            print("\t loss: ", elbo)
             
             with summary_writer.as_default():
                 tf.summary.scalar('elbo', elbo, step=epoch)

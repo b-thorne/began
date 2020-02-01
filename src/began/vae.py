@@ -41,20 +41,20 @@ def make_vae_generative_net(latent_dim):
     assert model.output_shape == (None, 16, 16, 32)
     
     model.add(tf.keras.layers.BatchNormalization(momentum=0.9))
-    model.add(tf.keras.layers.Conv2DTranspose(filters=64, kernel_size=5, strides=(2, 2), padding="SAME", activation='relu'))
-    assert model.output_shape == (None, 32, 32, 64)
+    model.add(tf.keras.layers.Conv2DTranspose(filters=128, kernel_size=5, strides=(2, 2), padding="SAME", activation='relu'))
+    assert model.output_shape == (None, 32, 32, 128)
     
     model.add(tf.keras.layers.BatchNormalization(momentum=0.9))
-    model.add(tf.keras.layers.Conv2DTranspose(filters=64, kernel_size=5, strides=(2, 2), padding="SAME", activation='relu'))
-    assert model.output_shape == (None, 64, 64, 64)
+    model.add(tf.keras.layers.Conv2DTranspose(filters=128, kernel_size=5, strides=(2, 2), padding="SAME", activation='relu'))
+    assert model.output_shape == (None, 64, 64, 128)
     
     model.add(tf.keras.layers.BatchNormalization(momentum=0.9))
-    model.add(tf.keras.layers.Conv2DTranspose(filters=64, kernel_size=5, strides=(2, 2), padding="SAME", activation='relu'))
-    assert model.output_shape == (None, 128, 128, 64)
+    model.add(tf.keras.layers.Conv2DTranspose(filters=128, kernel_size=5, strides=(2, 2), padding="SAME", activation='relu'))
+    assert model.output_shape == (None, 128, 128, 128)
     
     model.add(tf.keras.layers.BatchNormalization(momentum=0.9))
-    model.add(tf.keras.layers.Conv2DTranspose(filters=64, kernel_size=5, strides=(2, 2), padding="SAME", activation='relu'))
-    assert model.output_shape == (None, 256, 256, 64)
+    model.add(tf.keras.layers.Conv2DTranspose(filters=128, kernel_size=5, strides=(2, 2), padding="SAME", activation='relu'))
+    assert model.output_shape == (None, 256, 256, 128)
     
     model.add(tf.keras.layers.Conv2DTranspose(filters=1, kernel_size=5, strides=(1, 1), padding="SAME"))
     return model

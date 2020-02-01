@@ -4,7 +4,7 @@ import pymaster as nmt
 import matplotlib.pyplot as plt
 
 class StatsError(Exception):
-    """ General python exception-derived object to raise erros within the 
+    """ General python exception-derived object to raise errors within the 
     `stats` submodule.
     """
 
@@ -80,7 +80,6 @@ def square_root_mat(mat):
     return sqrt
 
 
-
 def pixel_intensity_histogram(arr, nbins, hist_range=None, normed=False):
     """ Function to calculate the pixel intensity histogram for a set of
     maps.
@@ -109,7 +108,7 @@ def pixel_intensity_histogram(arr, nbins, hist_range=None, normed=False):
     return np.histogram(arr, nbins, range=hist_range, normed=normed)
 
 
-def batch_00_autospectrum(ma, spanx, spany, mask, nmtbin, wsp):
+def batch_00_autospectrum(arrs, ang_x, ang_y, mask, nmtbin, wsp=None):
     """ This is a function to calculate a batch estimate of the power
     spectrum for a set of flat-sky maps. It uses NaMaster to do all
     of the calculations of power spectra and mode coupling.
@@ -123,13 +122,13 @@ def batch_00_autospectrum(ma, spanx, spany, mask, nmtbin, wsp):
     ma: ndarray
         Numpy array with three dimensions corresponding to (NBATCH,
         XRES, YRES).
-    spanx, spany: float
+    ang_x, ang_y: float
         Dimensions of the map in radians
     mask: ndarray
         Mask of same shape as map.
-    wsp: `pymaster.NmtWorkspace` object
+    wsp: `pymaster.NmtWorkspace` object (optional, default=None)
         Instance of a pymaster.NmtWorkspace object containing the
-        mode coupling matrix.
+        mode coupling matrix. If `None`, will be computed.
 
     Returns
     -------
@@ -137,40 +136,122 @@ def batch_00_autospectrum(ma, spanx, spany, mask, nmtbin, wsp):
         Numpy array containing the power spectra, of shape (NBATCH
         N_BANDS).
     """
-    _assertNdim(ma, 3)
-    return np.array(list(map(map_to_00_autospectrum(ma, spanx, spany, mask, nmtbin, wsp))))
+    _assertNdim(arrs, 3)
+    if wsp is None:
+        wsp = calculate_mode_coupling_matrix(ang_x, ang_y, mask, arrs[0], nmtbin)
+    return np.array([map_to_00_autospectrum(arr, ang_x, ang_y, mask, nmtbin, wsp) for arr in arrs])
+  
+
+def calculate_mode_coupling_matrix(ang_x, ang_y, mask, arr, nmtbin):
+    """ Function to calculate the mode coupling matrix for a given
+    patch setup, and return it in a `nmt.NmtWorkspaceFlat` object.
+
+    Parameters
+    ----------
+    ang_x, ang_y: float
+        Patch dimensions in radians
+    mask: ndarray
+        Mask to be used in calculation of mode coupling matrix
+    ma: ndarray
+        Example field to use. Does not affect returned result, but necessary for API.
+    nmtbin: `nmt.NmtBinFlat`
+        Instance of `nmt.NmtBinFlat` object.
+    
+    Returns
+    -------
+    `nmt.NmtWorkspaceFlat`
+        Instance of a `nmt.NmtWorkspaceFlat` object with a
+        pre-calculated mode coupling matrix.
+    """
+    wsp = nmt.NmtWorkspaceFlat()
+    f0 = nmt.NmtFieldFlat(ang_x, ang_y, mask, [arr])
+    wsp.compute_coupling_matrix(f0, f0, nmtbin)
+    return wsp
 
 
-def map_to_00_autospectrum(ma, spanx, spany, mask, nmtbin, wsp):
+def map_to_00_autospectrum(arr, ang_x, ang_y, mask, nmtbin, wsp=None):
     """ Function to calculate the auto spectrum of a given map, given
     the angular range it spans, a mask, a binning scheme, and a
     pre-computed mode coupling matrix.
 
     Parameters
     ----------
-    ma: ndarray
+    arr: ndarray
         A two-dimensional numpy array.
-    spanx, spany: float
+    ang_x, ang_y: float
         The angular distance spanned in the x and y directions respectively.
     mask: ndarray
         A two-dimensional numpy array containing the mask to be applied
-        to the `ma` map.
+        to the `arr` map.
     nmtbin: pymaster.NmtBinFlat object
         Instance of the Namaster flat sky binning object.
-    wsp: pymaster.NmtWorkspaceFlat
+    wsp: pymaster.NmtWorkspaceFlat (optional, default=None)
         Instance of the Namaster flat sky workspace object with a precomputed
-        mode coupling matrix.
+        mode coupling matrix. If `None`, will be computed.
 
     Returns
     -------
     ndarray
-        The auto spectrum of the input map `ma`.
+        The auto spectrum of the input map `arr`.
     """
-    f0 = nmt.NmtFieldFlat(spanx, spany, mask, [ma])
+    f0 = nmt.NmtFieldFlat(ang_x, ang_y, mask, [arr])
+    if wsp is None:
+        wsp = calculate_mode_coupling_matrix(ang_x, ang_y, mask, arr, nmtbin)
     return wsp.decouple_cell(nmt.compute_coupled_cell_flat(f0, f0, nmtbin))
 
 
-def dimensions_to_nmtbin(npix_x, npix_y, spanx, spany):
+def build_flat_mask(npix_x, npix_y, ang_x, ang_y, aposize, taper=1./16.):
+    """ Function to create a rectangular mask from the specification
+    of number of pixels in each direction and corresponding angular
+    size.
+
+    First this function creates an array of ones of size (npix_x, npix_y).
+    Then, all pixels within an orthogonal fractional distance of `taper`
+    from an edge are set to zero. Finally, the `nmt.mask_apodization_flat`
+    function is applied, which enforces a smooth, twice-differentiable 
+    transition to zero at the edges, with scale `aposize`. 
+
+    Parameters
+    ----------
+    npix_x, npix_y: int
+        Number of pixels in x and y dimensions of the array.
+    ang_x, ang_y: float
+        Corresponding physical angular size of the map in radians.
+    aposize: float
+        Characteristic scale of taper in degrees.
+    taper: float (optional, default=1/16)
+        Dimensionless fraction corresponding to the proportion of the
+        map to set to zero to create the taper. As per the NaMaster
+        documentation this is set to 1 / 16 by default.
+
+    Returns
+    -------
+    ndarray
+        Array containing the apodized mask, shape (npix_x, npix_y)
+    """
+    try:
+        assert (taper < 0.5) and (taper > 0)
+    except AssertionError:
+        raise StatsError("`taper` must have a value between 0 and .5")
+
+    mask = np.ones(npix_x * npix_y).flatten()
+    # create grid increasing in x direction, max = ang_x
+    xarr = np.ones(npix_y)[:, None] * np.arange(npix_x)[None, :] * ang_x / npix_x
+    # create grid increasing in y direction, max = ang_y
+    yarr = np.ones(npix_x)[None, :] * np.arange(npix_y)[:, None] * ang_y / npix_y
+
+    # Trim the edges in order to implement tranistion to zero, mask apodization in
+    # step after this requires a layer of zeros in order to smooth.
+    mask[np.where(xarr.flatten() < ang_x * taper)] = 0
+    mask[np.where(xarr.flatten() > ang_x * (1. - taper))] = 0
+    mask[np.where(yarr.flatten() < ang_y * taper)] = 0
+    mask[np.where(yarr.flatten() > ang_y * (1. - taper))] = 0
+    mask = mask.reshape((npix_x, npix_y))
+    # apply smoothing filter for transition at edges
+    return nmt.mask_apodization_flat(mask, ang_x, ang_y, aposize=aposize, apotype="C1")
+
+
+def dimensions_to_nmtbin(npix_x, npix_y, ang_x, ang_y):
     """ Function to create a pymaster.NmtBinFlat object from the
     dimensions of a given map.
 
@@ -178,11 +259,11 @@ def dimensions_to_nmtbin(npix_x, npix_y, spanx, spany):
     ----------
     npix_x, npix_y: float
         Number of pixels along the x and y dimensions respectively.
-    spanx, spanx: float
+    ang_x, ang_y: float
         The physical angular range spanned by each dimension in radians.
     """
-    l0_bins = np.arange(npix_x / 8.) * 8 * np.pi / spanx
-    lf_bins = (np.arange(npix_x / 8.) + 1.) * 8. * np.pi / spany
+    l0_bins = np.arange(npix_x / 8.) * 8 * np.pi / ang_x
+    lf_bins = (np.arange(npix_x / 8.) + 1.) * 8. * np.pi / ang_y
     return nmt.NmtBinFlat(l0_bins, lf_bins)
 
 

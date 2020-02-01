@@ -79,5 +79,5 @@ def plot(ma, fig=None, ax=None, extent=None, xlabel=None, ylabel=None, title=Non
         ax.set_yticklabels(list([r"${:d}^\circ$".format(int(t)) for t in ax.get_yticks()]))
     
     if not ret_im:
-        return fig
+        return fig, ax
     return im

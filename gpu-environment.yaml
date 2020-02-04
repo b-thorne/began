@@ -10,6 +10,7 @@ dependencies:
   - pandas
   - ipython
   - namaster
+  - pyyaml
   - numba
   - scikit-image
   - toml
@@ -17,12 +18,14 @@ dependencies:
   - tqdm
   - click
   - matplotlib
+  - seaborn
   - tensorflow-gpu
   - pip:
      # add here only pip-packages that are not available in conda/conda-forge! E.g.:
      - optuna
      - tensorflow_probability
      - tables
+     - dvc[gdrive]
   # for development only (could also be kept in a separate environment file)
   - jupyterlab
   - pytest

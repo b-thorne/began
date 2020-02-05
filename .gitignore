@@ -69,3 +69,4 @@ envs-gpu/
 # Editor caches
 
 .vscode/
+/data

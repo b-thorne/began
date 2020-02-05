@@ -30,9 +30,9 @@ sys.excepthook = ultratb.FormattedTB(mode='Verbose', color_scheme='Linux', call_
 _logger = logging.getLogger(__name__)
 
 @click.command()
-@click.option('-c', '--train_cfg_path', 'train_cfg_path', required=True,
+@click.option('--train_cfg_path', 'train_cfg_path', required=True,
               type=click.Path(exists=True), help='path to training config file of network')
-@click.option('-c', '--model_cfg_path', 'model_cfg_path', required=True,
+@click.option('--model_cfg_path', 'model_cfg_path', required=True,
               type=click.Path(exists=True), help='path to model config file of network')
 @click.option('--train_path', 'train_path', required=True, 
                 type=click.Path(exists=True), help='path to training data')
@@ -91,7 +91,7 @@ def main(train_cfg_path: Path, model_cfg_path: Path, train_path: Path, model_pat
     train_dataset = dataset.skip(100)
 
 
-    optimizer = tf.keras.optimizers.Adam(beta_1=0.5, learning_rate=0.001)
+    optimizer = tf.keras.optimizers.Adam(beta_1=0.5, learning_rate=0.0002)
     model = began.CVAE(lat_dim)
 
     # keeping the random vector constant for generation (prediction) so
@@ -134,3 +134,4 @@ def generate_and_save_images(model, epoch, test_input, plot_dir, title=None):
 
 if __name__ == '__main__':
     main()
+

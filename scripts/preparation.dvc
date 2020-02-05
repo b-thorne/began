@@ -1,0 +1,18 @@
+md5: c1f730b45ae2f990323597b4bbc8926d
+cmd: python scripts/preparation.py --config configs/preprocessing/planck_cutout.yaml
+  --input_path data/raw/planck/COM_CompMap_Dust-GNILC-F545_2048_R2.00.fits --output_path
+  data/preprocessed/prepared.npy -v
+wdir: ..
+deps:
+- md5: 27ab791655731e972400197d2667a4fc
+  path: data/raw/planck/COM_CompMap_Dust-GNILC-F545_2048_R2.00.fits
+- md5: cd316501b8ce5f09b2573d0ba1a62b3c
+  path: scripts/preparation.py
+- md5: e57b0bdb538a685b865f0b03fe3f0b63
+  path: configs/preprocessing/planck_cutout.yaml
+outs:
+- md5: cd48c2762631b0f3288685360002f042
+  path: data/preprocessed/prepared.npy
+  cache: true
+  metric: false
+  persist: false

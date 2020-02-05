@@ -72,6 +72,7 @@ def main(train_cfg_path: Path, model_cfg_path: Path, train_path: Path, model_pat
     
     # Hyperparameters of architecture and training
     lat_dim = model_config['architecture']['lat_dim']
+    kernel_size = model_config['architecture']['kernel_size']
     batch_size = train_config['batch_size']
     epochs = train_config['epochs']
     num_examples_to_generate = 9
@@ -92,7 +93,7 @@ def main(train_cfg_path: Path, model_cfg_path: Path, train_path: Path, model_pat
 
 
     optimizer = tf.keras.optimizers.Adam(beta_1=0.5, learning_rate=0.0002)
-    model = began.CVAE(lat_dim)
+    model = began.CVAE(lat_dim, kernel_size)
 
     # keeping the random vector constant for generation (prediction) so
     # it will be easier to see the improvement.

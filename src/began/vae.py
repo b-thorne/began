@@ -4,11 +4,11 @@ import tensorflow as tf
 import numpy as np
 
 class CVAE(tf.keras.Model):
-    def __init__(self, latent_dim):
+    def __init__(self, latent_dim, kernel_size):
         super(CVAE, self).__init__()
         self.latent_dim = latent_dim
         self.inference_net = make_vae_inference_net(latent_dim)
-        self.generative_net = make_vae_generative_net(latent_dim)
+        self.generative_net = make_vae_generative_net(latent_dim, kernel_size)
 
     @tf.function
     def sample(self, eps=None):
@@ -32,7 +32,7 @@ class CVAE(tf.keras.Model):
         return logits
 
 
-def make_vae_generative_net(latent_dim):
+def make_vae_generative_net(latent_dim, kernel_size):
     model = tf.keras.Sequential(name='Decoder')
     
     model.add(tf.keras.layers.InputLayer(input_shape=(latent_dim,)))
@@ -41,22 +41,22 @@ def make_vae_generative_net(latent_dim):
     assert model.output_shape == (None, 16, 16, 32)
     
     model.add(tf.keras.layers.BatchNormalization(momentum=0.9))
-    model.add(tf.keras.layers.Conv2DTranspose(filters=128, kernel_size=5, strides=(2, 2), padding="SAME", activation='relu'))
+    model.add(tf.keras.layers.Conv2DTranspose(filters=128, kernel_size=kernel_size, strides=(2, 2), padding="SAME", activation='relu'))
     assert model.output_shape == (None, 32, 32, 128)
     
     model.add(tf.keras.layers.BatchNormalization(momentum=0.9))
-    model.add(tf.keras.layers.Conv2DTranspose(filters=128, kernel_size=5, strides=(2, 2), padding="SAME", activation='relu'))
+    model.add(tf.keras.layers.Conv2DTranspose(filters=128, kernel_size=kernel_size, strides=(2, 2), padding="SAME", activation='relu'))
     assert model.output_shape == (None, 64, 64, 128)
     
     model.add(tf.keras.layers.BatchNormalization(momentum=0.9))
-    model.add(tf.keras.layers.Conv2DTranspose(filters=128, kernel_size=5, strides=(2, 2), padding="SAME", activation='relu'))
+    model.add(tf.keras.layers.Conv2DTranspose(filters=128, kernel_size=kernel_size, strides=(2, 2), padding="SAME", activation='relu'))
     assert model.output_shape == (None, 128, 128, 128)
     
     model.add(tf.keras.layers.BatchNormalization(momentum=0.9))
-    model.add(tf.keras.layers.Conv2DTranspose(filters=128, kernel_size=5, strides=(2, 2), padding="SAME", activation='relu'))
+    model.add(tf.keras.layers.Conv2DTranspose(filters=128, kernel_size=kernel_size, strides=(2, 2), padding="SAME", activation='relu'))
     assert model.output_shape == (None, 256, 256, 128)
     
-    model.add(tf.keras.layers.Conv2DTranspose(filters=1, kernel_size=5, strides=(1, 1), padding="SAME"))
+    model.add(tf.keras.layers.Conv2DTranspose(filters=1, kernel_size=kernel_size, strides=(1, 1), padding="SAME"))
     return model
 
 def make_vae_inception_net(latend_dim):

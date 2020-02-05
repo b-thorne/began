@@ -1,4 +1,4 @@
-md5: f1921e9922914a2ba23d1ae55e942eaa
+md5: d2233a4ee028e797a35d6286b0e837b2
 cmd: python scripts/train_vae.py --train_cfg_path configs/training/vae_train_default.yaml
   --model_cfg_path configs/models/vae_default.yaml --train_path data/preprocessed/prepared.npy
   --model_path models/vae.h5 --plot_dir models/plots
@@ -8,10 +8,10 @@ deps:
   path: data/preprocessed/prepared.npy
 - md5: 6582cc33229c9748c23a0b27db1956a0
   path: configs/training/vae_train_default.yaml
-- md5: 8c0bca2562614d306c4bd1d34687b63e
+- md5: 0133c8b47f004ae87e92ada981746992
   path: configs/models/vae_default.yaml
 outs:
-- md5: 65c79a19c44c7c1db74ce8bddcac9531
+- md5: f55a2acd9ef7edbbe2ca087bc587bb6f
   path: models/vae.h5
   cache: true
   metric: false

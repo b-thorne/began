@@ -73,16 +73,16 @@ def main(train_cfg_path: Path, model_cfg_path: Path, train_path: Path, model_pat
     # Hyperparameters of architecture and training
     lat_dim = model_config['architecture']['lat_dim']
     batch_size = train_config['batch_size']
-    EPOCHS = train_config['epochs']
+    epochs = train_config['epochs']
     num_examples_to_generate = 9
     logging.info("""
     Network parameters:
         Size of latent dimension: {:d}
         Batch size: {:d}
         Epochs: {:d}
-    """.format(lat_dim, batch_size, EPOCHS))
+    """.format(lat_dim, batch_size, epochs))
     # set up logging
-    summary_writer = setup_vae_run_logging(lat_dim, batch_size, EPOCHS)
+    summary_writer = setup_vae_run_logging(lat_dim, batch_size, epochs)
 
     # Batch and shuffle the data
     train_images = np.load(train_path).astype(np.float32)
@@ -98,7 +98,7 @@ def main(train_cfg_path: Path, model_cfg_path: Path, train_path: Path, model_pat
     # it will be easier to see the improvement.
     
     random_vector_for_generation = tf.random.normal(shape=[num_examples_to_generate, lat_dim])
-    for epoch in range(1, EPOCHS + 1):
+    for epoch in range(1, epochs + 1):
         print("Epoch: ", epoch)
         start_time = time.time()
         for step, train_x in enumerate(train_dataset):

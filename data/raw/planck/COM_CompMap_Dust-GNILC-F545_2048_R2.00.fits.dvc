@@ -1,0 +1,7 @@
+md5: 6b6fdbe3b9d04a36021f06cc0cc11e7c
+outs:
+- md5: 27ab791655731e972400197d2667a4fc
+  path: COM_CompMap_Dust-GNILC-F545_2048_R2.00.fits
+  cache: true
+  metric: false
+  persist: false

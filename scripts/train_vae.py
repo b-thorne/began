@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 import sys
 import time
+import yaml
 
 import click
 from IPython.core import ultratb
@@ -29,8 +30,10 @@ sys.excepthook = ultratb.FormattedTB(mode='Verbose', color_scheme='Linux', call_
 _logger = logging.getLogger(__name__)
 
 @click.command()
-@click.option('-c', '--cfg_path', 'cfg_path', required=True,
-              type=click.Path(exists=True), help='path to config file of network')
+@click.option('-c', '--train_cfg_path', 'train_cfg_path', required=True,
+              type=click.Path(exists=True), help='path to training config file of network')
+@click.option('-c', '--model_cfg_path', 'model_cfg_path', required=True,
+              type=click.Path(exists=True), help='path to model config file of network')
 @click.option('--train_path', 'train_path', required=True, 
                 type=click.Path(exists=True), help='path to training data')
 @click.option('--model_path', 'model_path', required=True,
@@ -40,7 +43,7 @@ _logger = logging.getLogger(__name__)
 @click.option('--quiet', 'log_level', flag_value=logging.WARNING, default=True)
 @click.option('-v', '--verbose', 'log_level', flag_value=logging.INFO)
 @click.option('-vv', '--very-verbose', 'log_level', flag_value=logging.DEBUG)
-def main(cfg_path: Path, train_path: Path, model_path: Path, plot_dir: Path, seed: int, log_level: int):
+def main(train_cfg_path: Path, model_cfg_path: Path, train_path: Path, model_path: Path, plot_dir: Path, seed: int, log_level: int):
     # initialize random seed in numpy
     np.random.seed(seed)
     # initialize random seed in tensorflow
@@ -52,6 +55,12 @@ def main(cfg_path: Path, train_path: Path, model_path: Path, plot_dir: Path, see
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     plot_dir = Path(plot_dir).absolute()
 
+    with open(train_cfg_path) as f:
+        train_config = yaml.load(f, Loader=yaml.FullLoader)
+    
+    with open(model_cfg_path) as f:
+        model_config = yaml.load(f, Loader=yaml.FullLoader)
+
     logging.info(
         """Dependencies:
             Training data path: {:s}
@@ -62,34 +71,33 @@ def main(cfg_path: Path, train_path: Path, model_path: Path, plot_dir: Path, see
     logging.info("""Working with GPU: {:s}""".format(str(tf.test.is_gpu_available())))
     
     # Hyperparameters of architecture and training
-    LAT_DIM = 64
-    BATCH_SIZE = 32
-    EPOCHS = 50
-    NUM_EXAMPLES_TO_GENERATE = 4
+    lat_dim = model_config['architecture']['lat_dim']
+    batch_size = train_config['batch_size']
+    EPOCHS = train_config['epochs']
+    num_examples_to_generate = 9
     logging.info("""
     Network parameters:
-        LAT_DIM: {:d}
-        BATCH_SIZE: {:d}
-        EPOCHS: {:d}
-        NUM_EXAMPLES_TO_GENERATE: {:d}
-    """.format(LAT_DIM, BATCH_SIZE, EPOCHS, NUM_EXAMPLES_TO_GENERATE))
+        Size of latent dimension: {:d}
+        Batch size: {:d}
+        Epochs: {:d}
+    """.format(lat_dim, batch_size, EPOCHS))
     # set up logging
-    summary_writer = setup_vae_run_logging(LAT_DIM, BATCH_SIZE, EPOCHS)
+    summary_writer = setup_vae_run_logging(lat_dim, batch_size, EPOCHS)
 
     # Batch and shuffle the data
     train_images = np.load(train_path).astype(np.float32)
-    dataset = tf.data.Dataset.from_tensor_slices(train_images).shuffle(train_images.shape[0]).batch(BATCH_SIZE)
+    dataset = tf.data.Dataset.from_tensor_slices(train_images).shuffle(train_images.shape[0]).batch(batch_size)
     test_dataset = dataset.take(100)
     train_dataset = dataset.skip(100)
 
 
     optimizer = tf.keras.optimizers.Adam(beta_1=0.5, learning_rate=0.001)
-    model = began.CVAE(LAT_DIM)
+    model = began.CVAE(lat_dim)
 
     # keeping the random vector constant for generation (prediction) so
     # it will be easier to see the improvement.
     
-    random_vector_for_generation = tf.random.normal(shape=[NUM_EXAMPLES_TO_GENERATE, LAT_DIM])
+    random_vector_for_generation = tf.random.normal(shape=[num_examples_to_generate, lat_dim])
     for epoch in range(1, EPOCHS + 1):
         print("Epoch: ", epoch)
         start_time = time.time()

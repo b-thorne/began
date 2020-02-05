@@ -234,7 +234,7 @@ def build_flat_mask(npix_x, npix_y, ang_x, ang_y, aposize, taper=1./16.):
     except AssertionError:
         raise StatsError("`taper` must have a value between 0 and .5")
 
-    mask = np.ones(npix_x * npix_y).flatten()
+    mask = np.ones((npix_x, npix_y)).flatten()
     # create grid increasing in x direction, max = ang_x
     xarr = np.ones(npix_y)[:, None] * np.arange(npix_x)[None, :] * ang_x / npix_x
     # create grid increasing in y direction, max = ang_y
@@ -242,10 +242,10 @@ def build_flat_mask(npix_x, npix_y, ang_x, ang_y, aposize, taper=1./16.):
 
     # Trim the edges in order to implement tranistion to zero, mask apodization in
     # step after this requires a layer of zeros in order to smooth.
-    mask[np.where(xarr.flatten() < ang_x * taper)] = 0
-    mask[np.where(xarr.flatten() > ang_x * (1. - taper))] = 0
-    mask[np.where(yarr.flatten() < ang_y * taper)] = 0
-    mask[np.where(yarr.flatten() > ang_y * (1. - taper))] = 0
+    mask[np.where(xarr.flatten() < ang_x * taper)] = 0.
+    mask[np.where(xarr.flatten() > ang_x * (1. - taper))] = 0.
+    mask[np.where(yarr.flatten() < ang_y * taper)] = 0.
+    mask[np.where(yarr.flatten() > ang_y * (1. - taper))] = 0.
     mask = mask.reshape((npix_x, npix_y))
     # apply smoothing filter for transition at edges
     return nmt.mask_apodization_flat(mask, ang_x, ang_y, aposize=aposize, apotype="C1")

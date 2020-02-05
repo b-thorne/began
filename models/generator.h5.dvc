@@ -1,7 +1,0 @@
-md5: 03acb5dd5c31bc413b3f5cbf39fb7540
-outs:
-- md5: db70efd46d542b4e35127910b27cb328
-  path: generator.h5
-  cache: true
-  metric: false
-  persist: false

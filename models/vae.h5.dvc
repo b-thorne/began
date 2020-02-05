@@ -1,7 +1,0 @@
-md5: 45222f89e36e2a72a4361f7fde68ca96
-outs:
-- md5: fde13e44fda53572aa9b51be38751e47
-  path: vae.h5
-  cache: true
-  metric: false
-  persist: false

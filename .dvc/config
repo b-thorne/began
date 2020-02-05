@@ -1,6 +1,0 @@
-[core]
-remote = myremote
-['remote "myremote"']
-url = gdrive://root/my-dvc-root
-gdrive_client_id = 537206939474-q59r8a1rajgq00cg5v1c24keb0mk52bb.apps.googleusercontent.com
-gdrive_client_secret = IaBhVFbgY67pykWkfN49ZFcL

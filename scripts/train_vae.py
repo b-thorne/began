@@ -117,6 +117,8 @@ def main(train_cfg_path: Path, model_cfg_path: Path, train_path: Path, model_pat
             title = 'Epoch: {:03d}, Test set ELBO: {:04.02f}, time elapse for current epoch {:02.02f}'.format(epoch, elbo, end_time - start_time)
             generate_and_save_images(model, epoch, random_vector_for_generation, plot_dir, title)
 
+    model.save_weights(model_path)
+
 @tf.function
 def compute_apply_gradients(model, x, optimizer):
     with tf.GradientTape() as tape:

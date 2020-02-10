@@ -1,7 +1,7 @@
 md5: bcdbb81397cb007264df7b142fa4a753
 cmd: python scripts/preparation.py --config configs/preprocessing/planck_cutout.yaml
   --input_path data/raw/planck/COM_CompMap_Dust-GNILC-F545_2048_R2.00.fits --output_path
-  data/preprocessed/prepared.npy -p -v
+  data/preprocessed/prepared.npy -v
 wdir: ..
 deps:
 - md5: 27ab791655731e972400197d2667a4fc

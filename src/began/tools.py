@@ -115,7 +115,8 @@ def spin2rot(q, u, phi):
     p *= np.exp(2j * phi)
     return p.real, p.imag
 
-def get_patch_centers(gal_cut, step_size):
+@u.quantity_input
+def get_patch_centers(gal_cut: u.deg, step_size: u.deg):
     """ Function to get the centers of the various patches to be cut out.
 
     Parameters
@@ -132,6 +133,8 @@ def get_patch_centers(gal_cut, step_size):
     list(tuple(float))
         List of two-element tuples containing the longitude and latitude.
     """
+    gal_cut = gal_cut.to(u.deg)
+    step_size = step_size.to(u.deg)
     southern_lat_range = list(np.arange(-90 * u.deg, -gal_cut, step_size))
     northern_lat_range = list(np.arange(gal_cut + step_size, 90 * u.deg, step_size))
     lat_range = list(np.concatenate((southern_lat_range, northern_lat_range)))

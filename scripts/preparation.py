@@ -10,6 +10,7 @@ from IPython.core import ultratb
 
 import healpy as hp 
 import numpy as np
+import astropy.units as u
 from astropy.io import fits
 from began.tools import get_patch_centers, FlatCutter
 
@@ -44,10 +45,10 @@ def main(cfg_path: Path, input_path: Path, output_path: Path, log_level: int):
     # read configuration file
     with open(cfg_path) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
-    gal_cut = config['tiling']['gal_cut'] # latitudinal cut around galactic plane in degrees
-    step_size = config['tiling']['step_size'] # azimuthal step between patch centers in degrees
-    ang_x = config['patch']['ang_x'] # angular size of patch in degrees
-    ang_y = config['patch']['ang_y'] # angular size of patch in degrees
+    gal_cut = config['tiling']['gal_cut'] * u.deg # latitudinal cut around galactic plane in degrees
+    step_size = config['tiling']['step_size'] * u.deg # azimuthal step between patch centers in degrees
+    ang_x = config['patch']['ang_x'] * u.deg # angular size of patch in degrees
+    ang_y = config['patch']['ang_y'] * u.deg # angular size of patch in degrees
     xres = config['pixelization']['xres'] # pixelization in x dimension
     yres = config['pixelization']['yres'] # pixelization in y dimension
 

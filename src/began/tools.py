@@ -87,7 +87,7 @@ class FlatCutter(object):
             m_rot[-2], m_rot[-1] = spin2rot(m_rot[-2], m_rot[-1], self.lons.to(u.rad).value)
         else:
             m_rot = m_rot[0]
-        return np.array(m_rot).reshape(-1, self.xres, self.yres)
+        return np.array(m_rot).reshape(self.xres, self.yres, -1)
 
 def spin2rot(q, u, phi):
     """ Function to apply rotation by an angle `phi` to the
@@ -135,8 +135,10 @@ def get_patch_centers(gal_cut: u.deg, step_size: u.deg):
     """
     gal_cut = gal_cut.to(u.deg)
     step_size = step_size.to(u.deg)
-    southern_lat_range = np.arange(-90 * u.deg, -gal_cut, step_size)
-    northern_lat_range = np.arange(gal_cut + step_size, 90 * u.deg, step_size)
+    assert gal_cut.unit == u.deg
+    assert step_size.unit == u.deg
+    southern_lat_range = np.arange(-90, (-gal_cut-step_size).value, step_size.value) * u.deg
+    northern_lat_range = np.arange((gal_cut + step_size).value, 90, step_size.value) * u.deg
     lat_range = np.concatenate((southern_lat_range, northern_lat_range))
 
     centers = []

@@ -52,7 +52,7 @@ def main(input_path: Path, output_path: Path, seed: int, log_level: int):
     titles = ["{:d}".format(i) for i in indices]
     extent = (-10, 10, -10, 10)
     title = "Random set of maps from training set"
-    fig, axes = mplot(plot_data, title=title, xlabels=xlabels, ylabels=ylabels, titles=titles, extent=extent)
+    fig, axes = mplot(plot_data[:, 0, ...], title=title, xlabels=xlabels, ylabels=ylabels, titles=titles, extent=extent)
     fig.savefig(output_path / "sample_of_training_maps.pdf")
 
 if __name__ == '__main__':

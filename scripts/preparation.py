@@ -29,10 +29,11 @@ _logger = logging.getLogger(__name__)
                 type=click.Path(exists=True), help='path to input data')
 @click.option('--output_path', 'output_path', required=True,
                 type=click.Path(), help='path to output file')
+@click.option('-p', 'polarization', default=False)
 @click.option('--quiet', 'log_level', flag_value=logging.WARNING, default=True)
 @click.option('-v', '--verbose', 'log_level', flag_value=logging.INFO)
 @click.option('-vv', '--very-verbose', 'log_level', flag_value=logging.DEBUG)
-def main(cfg_path: Path, input_path: Path, output_path: Path, log_level: int):
+def main(cfg_path: Path, input_path: Path, output_path: Path, polarization: bool, log_level: int):
     logging.basicConfig(stream=sys.stdout,
                         level=log_level,
                         datefmt='%Y-%m-%d %H:%M',
@@ -53,9 +54,11 @@ def main(cfg_path: Path, input_path: Path, output_path: Path, log_level: int):
     yres = config['pixelization']['yres'] # pixelization in y dimension
 
     # read map and infer nside
-    input_map = hp.read_map(input_path, dtype=np.float64, verbose=False)
-    nside = hp.get_nside(input_map)
-    logging.debug("Nside inferred from input map: {:d}".format(nside))
+    if polarization:
+        fields = (0, 1, 2)
+    else:
+        fields = 0
+    input_map = hp.read_map(input_path, fields=(0, 1, 2), dtype=np.float64, verbose=False)
     logging.debug("Input map fits header: \n {:s}".format(repr(fits.open(input_path)[1].header)))
     
     logging.info(
@@ -74,7 +77,7 @@ def main(cfg_path: Path, input_path: Path, output_path: Path, log_level: int):
 
     # cut out maps at each of the patch centers
     fc = FlatCutter(ang_x, ang_y, xres, yres)
-    cut_maps = [fc.rotate_and_interpolate(lon, lat, input_map) for (lon, lat) in centers]
+    cut_maps = [fc.rotate_to_pole_and_interpolate(lon, lat, input_map) for (lon, lat) in centers]
 
     # rescale
     cut_maps = np.log(cut_maps)

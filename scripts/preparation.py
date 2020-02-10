@@ -55,10 +55,10 @@ def main(cfg_path: Path, input_path: Path, output_path: Path, polarization: bool
 
     # read map and infer nside
     if polarization:
-        fields = (0, 1, 2)
+        field = (0, 1, 2)
     else:
-        fields = 0
-    input_map = hp.read_map(input_path, fields=(0, 1, 2), dtype=np.float64, verbose=False)
+        field = 0
+    input_map = hp.read_map(input_path, field=field, dtype=np.float64, verbose=False)
     logging.debug("Input map fits header: \n {:s}".format(repr(fits.open(input_path)[1].header)))
     
     logging.info(
@@ -84,7 +84,7 @@ def main(cfg_path: Path, input_path: Path, output_path: Path, polarization: bool
     cut_maps = 2 * (cut_maps - cut_maps.min()) / (cut_maps.max() - cut_maps.min()) - 1.
 
     # save maps and add new axis at end corresponding to channel
-    np.save(output_path, cut_maps[..., None])
+    np.save(output_path, cut_maps)
 
 if __name__ == '__main__':
     main()  

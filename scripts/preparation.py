@@ -11,20 +11,9 @@ from IPython.core import ultratb
 import healpy as hp 
 import numpy as np
 from astropy.io import fits
-import began
+from began.tools import get_patch_centers, FlatCutter
 
-def get_patch_centers(gal_cut, step_size):
-    ""
-    southern_lat_range = list(np.arange(-90, -gal_cut, step_size))
-    northern_lat_range = list(np.arange(gal_cut + step_size, 90, step_size))
-    lat_range = list(np.concatenate((southern_lat_range, northern_lat_range)))
 
-    centers = []
-    for t in lat_range:
-        step = step_size / np.cos(t * np.pi / 180.)
-        for i in np.arange(0, 360, step):
-            centers.append((i, t))
-    return centers
 
 
 # fallback to debugger on error
@@ -83,11 +72,13 @@ def main(cfg_path: Path, input_path: Path, output_path: Path, log_level: int):
         """.format(ang_x, ang_y, xres, yres))
 
     # cut out maps at each of the patch centers
-    fc = began.FlatCutter(ang_x, ang_y, xres, yres)
-    cut_maps = [fc.rotate_and_interpolate(center, input_map) for center in centers]
+    fc = FlatCutter(ang_x, ang_y, xres, yres)
+    cut_maps = [fc.rotate_and_interpolate(lon, lat, input_map) for (lon, lat) in centers]
     
+    np.save("flat_maps.npy", np.array(cut_maps))
+
     # rescale
-    cut_maps = np.log(cut_maps)  
+    cut_maps = np.log(cut_maps)
     cut_maps = 2 * (cut_maps - cut_maps.min()) / (cut_maps.max() - cut_maps.min()) - 1.
 
     # save maps and add new axis at end corresponding to channel

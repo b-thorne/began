@@ -1,8 +1,10 @@
 import os
 import numpy as np
 import healpy as hp
+import cmath
 import h5py
 from pathlib import Path
+import astropy.units as u
 import matplotlib.pyplot as plt
 
 
@@ -17,234 +19,126 @@ class FlatCutter(object):
     point (lon, lat). The value of the map at the resulting grid of longitudes 
     and latitudes is then determined by interpolation. 
     """
-    def __init__(self, xlen, ylen, xres, yres):
+    @u.quantity_input
+    def __init__(self, ang_x: u.deg, ang_y: u.deg, xres, yres):
+        assert type(xres) is int
+        assert type(yres) is int
         self.xres = xres
         self.yres = yres
-        self.xarr = np.linspace(-xlen, xlen, xres)
-        self.yarr = np.linspace(-ylen, ylen, yres)
+
+        self.ang_x = ang_x
+        self.ang_y = ang_y
+        
+        # get grid of unit vectors corresponding to flat patch around
+        # pole (z = 1). For this we use ang_x in radians, as is appropriate
+        # for the implicit small-angle approximation 
+        self.xarr = np.linspace(- self.ang_x.to(u.rad).value / 2., 
+                                self.ang_x.to(u.rad).value / 2., xres)
+        self.yarr = np.linspace(- self.ang_y.to(u.rad).value / 2., 
+                                self.ang_y.to(u.rad).value / 2., yres)
+
         xgrid, ygrid = np.meshgrid(self.xarr, self.yarr)
-        self.xgrid_points = xgrid.ravel()
-        self.ygrid_points = ygrid.ravel()
+        xgrid = xgrid.ravel()[None, :]
+        ygrid = ygrid.ravel()[None, :]
+        zgrid = np.ones_like(ygrid)
+        
+        # vectors corresponding to cartesian grid around poll
+        self.vecs = np.concatenate((xgrid, ygrid, zgrid)).T
+
+        # get the latitude (*not colatitude*) and longitude in degrees
+        # of the cartesian grid points around the pole. 
+        self.lons, self.lats = hp.vec2ang(self.vecs, lonlat=True)
+        self.lats *= u.deg
+        self.lons *= u.deg
         return
     
-    def rotate_and_interpolate(self, rot, ma, coord='G'):
+    @u.quantity_input
+    def rotate_to_pole_and_interpolate(self, lon: u.deg, lat: u.deg, ma):
         """ Method to rotate the grid at (0, 0) to `rot=(lon, lat)`, and sample
         the map at the grid points by interpolation.
 
         Parameters
         ----------
-        rot: tuple(float)
-            Tuple containing two numbers, the longitude and latitude of the
-            point to be rotated to, in degrees.
+        lat, lon: float
+            Latitude (*not* colatitude) and longitude of point to be rotated
+            to the North pole, in degrees.
         ma: ndarray
             Healpix map from which the interpolation is to be made.
-        coord: string (optional, default "G")
-            The coordinate system in which the HEALPix map is provided.
         """
-        # define a rotation object that can take an input unit vector, or
-        # (lon, lat) pair.
-        r = hp.Rotator(rot=rot, coord=coord, deg=True)
-        lon_grid, lat_grid = r(self.xgrid_points, self.ygrid_points, 
-                                lonlat=True, inv=True)
-        return hp.get_interp_val(ma, lon_grid, lat_grid, lonlat=True).reshape((self.xres, self.yres))
+        if hp.pixelfunc.maptype(ma) == 0:  # a single map is converted to a list
+            ma = [ma]
+        # define a rotation object in terms of the theta_rot and phi_rot angles.
+        # This returns a rotator object that can be applied to rotate a given
+        # vector by this angle. Since we are interested in rotating some patch
+        # to the pole, we actually want to apply the *inverse* rotation operator
+        # to the vectors self.co_lats, self.lons.
+        lon = lon.to(u.deg)
+        lat = lat.to(u.deg)
+        rotator = hp.Rotator(rot=[lon.value, lat.value - 90.], deg=True)
+        self.inv_lon_grid, self.inv_lat_grid = rotator.I(self.lons.to(u.deg).value, self.lats.to(u.deg).value, lonlat=True)
+        # Interpolate the original map to the pixels centers in the new ref frame
+        m_rot = [hp.get_interp_val(each, self.inv_lon_grid, self.inv_lat_grid, lonlat=True) for each in ma]
 
-class CartProj(object):
-    """ Object to carry out the division of a map into rectangular subpatches and project to a 
-    Cartesian grid.
-    """
-    def __init__(self, map_fpath, lonra=[-10, 10], latra=[-10, 10], xsize=800, ysize=800, field=(0)):
-        try:
-            assert isinstance(map_fpath, Path)
-        except TypeError:
-            raise TypeError("File path must be instance of `pathlib.Path`")
-        self.map_fpath = map_fpath
-        self.map = hp.read_map(str(self.map_fpath), field=field)
-        # longitude range in degrees
-        self.lonra = lonra
-        # latitude range in degrees
-        self.latra = latra
-        # x-resolution 
-        self.xsize = xsize
-        # y-resolution
-        self.ysize = ysize
-        return
-    
-    def __call__(self, rot):
-        """ Method to project a point at `rot`=(lon, lat) to the equator and then project
-        into a Cartesian grid. The rotation prevents a latitude-dependent projection bias,
-        and the `plt.close` method closes the matplotlib axes created by the `hp.cartview`
-        function.
-        
-        Parameters
-        ----------
-        rot: tuple(float)
-            Tuple containing two floats denoting the longitude and latitude of the point
-            about which to cut project a rectangular region spanning `self.lonra` in
-            longitude and `self.latra` in latitude. Unit expected is degrees.
-            
-        Returns
-        -------
-        ndarray
-            Two-dimensional numpy array containing a cutout of `self.map`.
-            
-        Notes
-        -----
-            The cartview function opens a figure which is then closed, it would be nice
-            to not go through this process and extract the healpy function that does the
-            cutting. 
-            
-            Cartview expects `rot` in units of degrees, and `lonra` and `latra` in degrees.
-            
-            `latra` is expected to be a true `latitude`, in that it ranges from -90 to
-            +90, rather than the co-latitude that is used in some functions. For example
-            `hp.ang2pix` would expect co-latitude by default.
-        """
-        img = np.asarray(hp.cartview(self.map, rot=rot, return_projected_map=True, xsize=self.xsize, 
-                          ysize=self.ysize, lonra=self.lonra, latra=self.latra))
-        plt.close()
-        return img
+        # Rotate polarization
+        if len(m_rot) > 1:
+            # Create a complex map from QU  and apply the rotation in psi due to the rotation
+            # Slice from the end of the array so that it works both for QU and IQU
+            m_rot[-2], m_rot[-1] = spin2rot(m_rot[-2], m_rot[-1], rotator.angle_ref(self.inv_lon_grid, self.inv_lat_grid, lonlat=True))
+            m_rot[-2], m_rot[-1] = spin2rot(m_rot[-2], m_rot[-1], self.lons.to(u.rad).value)
+        else:
+            m_rot = m_rot[0]
+        return np.array(m_rot).reshape(-1, self.xres, self.yres)
 
-def get_patches(npatches):
-    """ Function to split a given HEALPix map into flat sky projections of
-    a given dimensionality. Given a number of patches, this function will
-    determine the positions and sizes of the corresponding pathces.
+def spin2rot(q, u, phi):
+    """ Function to apply rotation by an angle `phi` to the
+    spin-2 field defined by `q` and `u`.
 
-    This function implicitly assumes that the flat sky approximation is
-    appropriate, and therefore, that the angles subtended by each patch
-    are small.
+    This function calculates and returns:
 
-    Paramemters
-    -----------
-    inmap: ndarray
-        HEALPix map to be split.
-    npathes: int
-        Number of patches into which `inmap` should be split.
-    res: int (optional, default=900)
-        res gives the
+    P = \exp(2i\phi)(Q + iU)
+
+    Parameters
+    ----------
+    q, u: ndarray
+        Real and imaginary parts of spin-2 field.
+    phi: ndarray
+        Angle by which to rotate the spin-2 field.
 
     Returns
     -------
     ndarray
-        Numpy array of shape (npatches, xres, yres).
+        Rotated spin-2 field.
     """
-    try:
-        assert is_square(npatches)
-    except AssertionError:
-        raise AssertionError("npatches must be a square number.")
-    try:
-        assert isinstance(npatches, int)
-    except AssertionError:
-        raise AssertionError("npatches must be an integer.")
-    nslices = int(np.sqrt(npatches))
-    # determine longitude ranges in HEALPix convention.
-    lonras = get_slice_bounds(nslices, 0, 360)
-    # determine latitude ranges in HEALPix convention.
-    latras = get_slice_bounds(nslices, - 90, 90)
-    # combine lonra and latra to get definitions of all patches
-    # each elemnt of this list is a dictionary with lonra and latra
-    # keys.
-    patches = []
-    for lonra in lonras:
-        for latra in latras:
-            patches.append({'lonra': lonra, 'latra': latra})
-    return patches
+    p = np.empty(q.shape, dtype=complex)
+    p.real = q
+    p.imag = u
+    p *= np.exp(2j * phi)
+    return p.real, p.imag
 
-def get_slice_bounds(nslices, lo, hi):
-    """ Function to return the lower and upper edges of nslices slices in a range
-    given by the elements of bounds.
+def get_patch_centers(gal_cut, step_size):
+    """ Function to get the centers of the various patches to be cut out.
 
     Parameters
     ----------
-    nslices: int
-        Number of slices to split the range into.
-    lo, hi: float
-        The lower and upper bound of the range to be considered.
+    gal_cut: float
+        We will miss out the region +/- `gal_cut` in Galactic latitude, measured
+        in degrees.
+    step_size: float
+        Stepping distance in Galactic longitude, measured in degrees, between 
+        patches.
 
     Returns
     -------
-    generator
-        Generator for a list that has nslices elements, each of which is a tuple of two
-        numbers demarking the lower and upper bounds of each slice.
+    list(tuple(float))
+        List of two-element tuples containing the longitude and latitude.
     """
-    # split range given by bounds[0] to bounds[1] into nslices. bounds[1] is not
-    # included, so lo_bnds has only the lower edge of each slice.
-    lo_bnds, step = np.linspace(lo, hi, nslices, endpoint=False, retstep=True)
-    return [[lo_bnd, lo_bnd + step] for lo_bnd in lo_bnds]
+    southern_lat_range = list(np.arange(-90 * u.deg, -gal_cut, step_size))
+    northern_lat_range = list(np.arange(gal_cut + step_size, 90 * u.deg, step_size))
+    lat_range = list(np.concatenate((southern_lat_range, northern_lat_range)))
 
-def is_square(pos_int):
-    """ Function to check if a given number is a perfect square.
-
-    Parameters
-    ----------
-    pos_int: int
-        A given positive integer to be tested.
-
-    Returns
-    -------
-    bool
-        True if pos_int is squre, False otherwise.
-    """
-    x = pos_int // 2
-    seen = set([x])
-    while x * x != pos_int:
-        x = (x + (pos_int // x)) // 2
-        if x in seen:
-            return False
-        seen.add(x)
-    return True
-
-def apply_normalization():
-    """ Function to rescale a given map to the interval (-1, 1) required
-    by the GAN algorithm. 
-
-    Firstly, the map is 
-    """
-    return 
-
-if __name__ == '__main__':
-    # Resolution parameter. This dictates the number of pixels (RES ** 2) in
-    # the patch maps. The resolution of the 545 GHz map is 5 arcminutes. We
-    # want at least a few pixels per beam diameter in order to properly sample
-    # the beam. This sets a lower limit on RES. After splitting the sky into
-    # NPATCHES patches, each region will have size 
-    RES = 2 ** 8
-    NPATCHES = 2 ** 10
-    FILE = "HFI_SkyMap_545-field-Int_2048_R3.00_full.fits"
-    DATA_DIR = os.path.realpath("/home/bthorne/projects/gan/began/data/raw")
-    PROC_DIR = os.path.realpath("/home/bthorne/projects/gan/began/data/processed")
-    MAP_BASE = os.path.splitext(FILE)[0]
-    HFILE_NAME = "".join([MAP_BASE, ".hdf5"])
-    HFILE_PATH = os.path.join(PROC_DIR, HFILE_NAME)
-
-    # Read the given map in FILE
-    INMAP = hp.read_map(os.path.join(DATA_DIR, FILE), verbose=False)
-    # Get the longitude and latitude ranges for each patch
-    PATCHES = get_patches(NPATCHES)
-    # For each patch make a Cartesian projection
-    CART = np.empty((NPATCHES, RES, RES))
-    LONS = np.empty((NPATCHES, 2))
-    LATS = np.empty((NPATCHES, 2))
-    for i, patch in enumerate(PATCHES):
-        CART[i] = hp.cartview(INMAP, title='Cartview {:d}'.format(i), return_projected_map=True, xsize=RES, ysize=RES, **patch)
-        plt.close('all')
-        LONS[i] = patch['lonra']
-        LATS[i] = patch['latra']
-
-    # Write to file
-    with h5py.File(HFILE_PATH, 'w') as f:
-        intensity = f.create_group("Intensity")
-        planck = intensity.create_group("Planck")
-        # Record the original map
-        orig = planck.create_dataset("Original", data=INMAP)
-        orig.attrs['NSIDE'] = hp.get_nside(INMAP)
-        orig.attrs['FILE_NAME'] = FILE
-        # Save the renormalized and cutout maps
-        renorm = planck.create_dataset("Renormalized", data=CART)
-        renorm.attrs['NPATCHES'] = NPATCHES
-        renorm.attrs['FILE'] = FILE
-        renorm.attrs['RES'] = RES
-        renorm.attrs['LONRAS_HPIX'] = LONS
-        renorm.attrs['LATRAS_HPIX'] = LATS
-
-
-                
+    centers = []
+    for t in lat_range:
+        step = step_size.value / np.cos(t.to(u.rad).value)
+        for i in np.arange(0, 360, step):
+            centers.append((i * u.deg, t))
+    return centers

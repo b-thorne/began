@@ -59,7 +59,7 @@ def make_vae_generative_net(latent_dim, kernel_size):
     model.add(tf.keras.layers.Conv2DTranspose(filters=1, kernel_size=kernel_size, strides=(1, 1), padding="SAME"))
     return model
 
-def make_vae_inception_net(latend_dim):
+def make_vae_inception_net(latent_dim):
     model = tf.keras.Sequential(name='Decoder')
     
     model.add(tf.keras.layers.InputLayer(input_shape=(latent_dim,)))

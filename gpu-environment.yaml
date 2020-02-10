@@ -26,6 +26,7 @@ dependencies:
      - tensorflow_probability
      - tables
      - dvc[gdrive]
+     - camb
   # for development only (could also be kept in a separate environment file)
   - jupyterlab
   - pytest

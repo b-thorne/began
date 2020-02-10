@@ -46,7 +46,7 @@ def main(input_path: Path, output_path: Path, seed: int, log_level: int):
     ylabels = [r"y", None, r"$y$", None]
     logging.debug("Random seed: {:d}".format(seed))
     np.random.seed(seed)
-    indices = np.random.randint(0, 1033, 4)
+    indices = np.random.randint(0, 1033, 9)
     np.random.seed(None)
     plot_data = np.array([train_data[i] for i in indices])[..., 0]
     titles = ["{:d}".format(i) for i in indices]

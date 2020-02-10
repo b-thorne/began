@@ -74,8 +74,6 @@ def main(cfg_path: Path, input_path: Path, output_path: Path, log_level: int):
     # cut out maps at each of the patch centers
     fc = FlatCutter(ang_x, ang_y, xres, yres)
     cut_maps = [fc.rotate_and_interpolate(lon, lat, input_map) for (lon, lat) in centers]
-    
-    np.save("flat_maps.npy", np.array(cut_maps))
 
     # rescale
     cut_maps = np.log(cut_maps)

@@ -1,9 +1,10 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-
+#!/home/bthorne/projects/gan/began/envs-gpu/bin/python
+#SBATCH --job-name="vae-hp-optimization"
+#SBATCH -p gpu-shared
+#SBATCH --gres=gpu:p100:1
+#SBATCH --ntasks-per-node=7
+#SBATCH --mem=25G
+#SBATCH -t 24:00:00
 import logging
 from pathlib import Path
 import sys
@@ -14,18 +15,12 @@ import click
 from IPython.core import ultratb
 
 import tensorflow as tf
-import healpy as hp 
 import numpy as np
-from astropy.io import fits
 from pathlib import Path
 import h5py
 import began
 from began.logging import setup_vae_run_logging
 from began.visualization import mplot, plot
-
-
-# fallback to debugger on error
-sys.excepthook = ultratb.FormattedTB(mode='Verbose', color_scheme='Linux', call_pdb=1)
 
 _logger = logging.getLogger(__name__)
 
@@ -55,11 +50,13 @@ def main(train_cfg_path: Path, model_cfg_path: Path, train_path: Path, model_pat
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     plot_dir = Path(plot_dir).absolute()
 
+    cfg = {}
+
     with open(train_cfg_path) as f:
-        train_config = yaml.load(f, Loader=yaml.FullLoader)
+        cfg.update(yaml.load(f, Loader=yaml.FullLoader))
     
     with open(model_cfg_path) as f:
-        model_config = yaml.load(f, Loader=yaml.FullLoader)
+        cfg.update(yaml.load(f, Loader=yaml.FullLoader))
 
     logging.info(
         """Dependencies:
@@ -69,37 +66,33 @@ def main(train_cfg_path: Path, model_cfg_path: Path, train_path: Path, model_pat
     """.format(train_path, model_path, str(plot_dir)))
 
     logging.info("""Working with GPU: {:s}""".format(str(tf.test.is_gpu_available())))
-    
-    # Hyperparameters of architecture and training
-    lat_dim = model_config['architecture']['lat_dim']
-    kernel_size = model_config['architecture']['kernel_size']
-    batch_size = train_config['batch_size']
-    epochs = train_config['epochs']
-    num_examples_to_generate = 9
+
     logging.info("""
     Network parameters:
         Size of latent dimension: {:d}
         Batch size: {:d}
         Epochs: {:d}
-    """.format(lat_dim, batch_size, epochs))
+    """.format(cfg['lat_dim'], cfg['batch_size'], cfg['epochs']))
     # set up logging
-    summary_writer = setup_vae_run_logging(lat_dim, batch_size, epochs)
+    summary_writer = setup_vae_run_logging(cfg['lat_dim'], cfg['batch_size'], cfg['epochs'])
 
     # Batch and shuffle the data
-    train_images = np.load(train_path).astype(np.float32)
-    dataset = tf.data.Dataset.from_tensor_slices(train_images).shuffle(train_images.shape[0]).batch(batch_size)
+    with h5py.File(train_path, 'r') as f:
+        dset = f["cut_maps"]
+        train_images = dset[...].astype(np.float32)
+
+    dataset = tf.data.Dataset.from_tensor_slices(train_images).shuffle(train_images.shape[0]).batch(cfg['batch_size']).map(tf.image.per_image_standardization)
     test_dataset = dataset.take(100)
     train_dataset = dataset.skip(100)
 
-
-    optimizer = tf.keras.optimizers.Adam(beta_1=0.5, learning_rate=0.0002)
-    model = began.CVAE(lat_dim, kernel_size)
+    optimizer = tf.keras.optimizers.Adam(beta_1=cfg['beta_1'], learning_rate=cfg['learning_rate'])
+    model = began.CVAE(cfg['lat_dim'], cfg['kernel_size'])
 
     # keeping the random vector constant for generation (prediction) so
     # it will be easier to see the improvement.
     
-    random_vector_for_generation = tf.random.normal(shape=[num_examples_to_generate, lat_dim])
-    for epoch in range(1, epochs + 1):
+    random_vector_for_generation = tf.random.normal(shape=[9, cfg['lat_dim']])
+    for epoch in range(1, cfg['epochs'] + 1):
         print("Epoch: ", epoch)
         start_time = time.time()
         for step, train_x in enumerate(train_dataset):
@@ -112,7 +105,7 @@ def main(train_cfg_path: Path, model_cfg_path: Path, train_path: Path, model_pat
                 loss(began.vae.compute_loss(model, test_x))
             elbo = -loss.result()
             print("\t loss: ", elbo)
-            
+
             with summary_writer.as_default():
                 tf.summary.scalar('elbo', elbo, step=epoch)
             title = 'Epoch: {:03d}, Test set ELBO: {:04.02f}, time elapse for current epoch {:02.02f}'.format(epoch, elbo, end_time - start_time)

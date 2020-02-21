@@ -1,9 +1,6 @@
-pixelization:
-    xres: 256
-    yres: 256
-patch:
-    ang_x: 20.
-    ang_y: 20.
-tiling:
-    gal_cut: 16.
-    step_size: 4.
+xres: 256
+yres: 256
+ang_x: 20.
+ang_y: 20.
+gal_cut: 16.
+step_size: 4.

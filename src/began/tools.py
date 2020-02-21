@@ -87,7 +87,7 @@ class FlatCutter(object):
             m_rot[-2], m_rot[-1] = spin2rot(m_rot[-2], m_rot[-1], self.lons.to(u.rad).value)
         else:
             m_rot = m_rot[0]
-        return np.array(m_rot).reshape(self.xres, self.yres, -1)
+        return np.moveaxis(np.array(m_rot).reshape(-1, self.xres, self.yres), 0, -1)
 
 def spin2rot(q, u, phi):
     """ Function to apply rotation by an angle `phi` to the

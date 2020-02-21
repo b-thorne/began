@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 import sys
 import yaml
+import h5py
 
 import click
 from IPython.core import ultratb
@@ -43,48 +44,53 @@ def main(cfg_path: Path, input_path: Path, output_path: Path, polarization: bool
     Input {:s}
     Output: {:s}""".format(cfg_path, input_path, output_path))
 
+    # define a configuration dictionary
+    cfg = {}
+
     # read configuration file
     with open(cfg_path) as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)
-    gal_cut = config['tiling']['gal_cut'] * u.deg # latitudinal cut around galactic plane in degrees
-    step_size = config['tiling']['step_size'] * u.deg # azimuthal step between patch centers in degrees
-    ang_x = config['patch']['ang_x'] * u.deg # angular size of patch in degrees
-    ang_y = config['patch']['ang_y'] * u.deg # angular size of patch in degrees
-    xres = config['pixelization']['xres'] # pixelization in x dimension
-    yres = config['pixelization']['yres'] # pixelization in y dimension
+        cfg.update(yaml.load(f, Loader=yaml.FullLoader))
+
+    cfg['gal_cut'] *= u.deg
+    cfg['step_size'] *= u.deg
+    cfg['ang_x'] *= u.deg 
+    cfg['ang_y'] *= u.deg
 
     # read map and infer nside
     if polarization:
+        cfg['polarization'] = True
         field = (0, 1, 2)
     else:
+        cfg['polarization'] = False
         field = 0
+
     input_map = hp.read_map(input_path, field=field, dtype=np.float64, verbose=False)
     logging.debug("Input map fits header: \n {:s}".format(repr(fits.open(input_path)[1].header)))
-    
+
     logging.info(
         """Cutting map with tiling: 
         gal_cut: {:.01f}  
-        step_size: {:.01f}""".format(gal_cut, step_size))
+        step_size: {:.01f}""".format(cfg['gal_cut'], cfg['step_size']))
 
-    centers = get_patch_centers(gal_cut, step_size)
+    centers = get_patch_centers(cfg['gal_cut'], cfg['step_size'])
+   
     logging.debug("Number of patches: {:d}".format(len(centers)))
 
     logging.info(
-        """Patch parameters: 
+        """Patch parameters:
         Linear size in degrees: {:.01f} degrees by {:.01f} degrees
         Number of pixels: {:.01f} by {:.01f} 
-        """.format(ang_x, ang_y, xres, yres))
+        """.format(cfg['ang_x'], cfg['ang_y'], cfg['xres'], cfg['yres']))
 
     # cut out maps at each of the patch centers
-    fc = FlatCutter(ang_x, ang_y, xres, yres)
-    cut_maps = [fc.rotate_to_pole_and_interpolate(lon, lat, input_map) for (lon, lat) in centers]
-
-    # rescale
-    cut_maps = np.log(cut_maps)
-    cut_maps = 2 * (cut_maps - cut_maps.min()) / (cut_maps.max() - cut_maps.min()) - 1.
+    fc = FlatCutter(cfg['ang_x'], cfg['ang_y'], cfg['xres'], cfg['yres'])
+    cut_maps = np.array([fc.rotate_to_pole_and_interpolate(lon, lat, input_map) for (lon, lat) in centers])
 
     # save maps and add new axis at end corresponding to channel
-    np.save(output_path, cut_maps)
+    with h5py.File(output_path, "a") as f:
+        a = f.require_dataset("cut_maps", shape=cut_maps.shape, dtype=cut_maps.dtype)
+        a[...] = cut_maps
+        a.attrs.update(cfg)
 
 if __name__ == '__main__':
     main()  

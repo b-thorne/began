@@ -251,7 +251,7 @@ def build_flat_mask(npix_x, npix_y, ang_x, ang_y, aposize, taper=1./16.):
     return nmt.mask_apodization_flat(mask, ang_x, ang_y, aposize=aposize, apotype="C1")
 
 
-def dimensions_to_nmtbin(npix_x, npix_y, ang_x, ang_y):
+def dimensions_to_nmtbin(npix_x, npix_y, ang_x, ang_y, is_Dell=False):
     """ Function to create a pymaster.NmtBinFlat object from the
     dimensions of a given map.
 

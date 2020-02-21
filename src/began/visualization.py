@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.units as units
 import matplotlib.ticker as ticker
 
-def mplot(ma, extent=None, title=None, titles=None, cbar_range=None, xlabels=None, ylabels=None):
+def mplot(ma, extent=None, title=None, titles=None, cbar_range=None, xlabels=None, ylabels=None, layout=None, figsize=None):
     try:
         assert ma.ndim == 3
     except AssertionError:
@@ -23,7 +23,11 @@ def mplot(ma, extent=None, title=None, titles=None, cbar_range=None, xlabels=Non
     else:
         vmin, vmax = None, None
     
-    if nma <= 3:
+    if layout is not None:
+        assert figsize is not None
+        fig, axes = plt.subplots(*layout, sharey=True, figsize=figsize)
+
+    elif nma <= 3:
         fig, axes = plt.subplots(1, nma, sharey=True, figsize=(4 * nma, 4))
 
     else:

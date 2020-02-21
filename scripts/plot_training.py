@@ -3,6 +3,7 @@
 import logging
 from pathlib import Path
 import sys
+import h5py
 
 import click
 from IPython.core import ultratb
@@ -41,29 +42,30 @@ def main(input_path: Path, output_path: Path, polarization: bool, seed: int, log
     """.format(input_path, output_path))
 
     output_path = Path(output_path).absolute()
-    train_data = np.load(input_path)
+
 
     xlabels = None
     ylabels = None
     logging.debug("Random seed: {:d}".format(seed))
     np.random.seed(seed)
-    indices = np.random.randint(0, 1033, 9)
+    indices = np.sort(np.random.randint(0, 1033, 9))
+    with h5py.File(input_path, 'r') as f:
+        plot_data = f["norm_maps"][indices] 
     np.random.seed(None)
-    plot_data = np.array([train_data[i] for i in indices])
     titles = ["{:d}".format(i) for i in indices]
     extent = (-10, 10, -10, 10)
     title = "Random set of maps from training set"
     fig, axes = mplot(plot_data[..., 0], title=title, xlabels=xlabels, ylabels=ylabels, titles=titles, extent=extent)
-    fig.savefig(output_path / "sample_of_training_maps_t.pdf")
+    fig.savefig(output_path / "sample_of_training_maps_t.png", bbox_inches='tight')
 
     if polarization:
         title = "Random set of Q maps from training set"
         fig, axes = mplot(plot_data[..., 1], title=title, xlabels=xlabels, ylabels=ylabels, titles=titles, extent=extent)
-        fig.savefig(output_path / "sample_of_training_maps_q.pdf")
+        fig.savefig(output_path / "sample_of_training_maps_q.png", bbox_inches='tight')
 
         title = "Random set of U maps from training set"
         fig, axes = mplot(plot_data[..., 2], title=title, xlabels=xlabels, ylabels=ylabels, titles=titles, extent=extent)
-        fig.savefig(output_path / "sample_of_training_maps_u.pdf")
+        fig.savefig(output_path / "sample_of_training_maps_u.png", bbox_inches='tight')
 
 
 if __name__ == '__main__':

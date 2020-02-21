@@ -1,3 +1,2 @@
-architecture:
-    lat_dim: 128
-    kernel_size: 6
+lat_dim: 256
+kernel_size: 5

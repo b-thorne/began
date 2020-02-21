@@ -69,3 +69,15 @@ envs-gpu/
 # Editor caches
 
 .vscode/
+
+# Checkpoints
+**/checkpoint*
+
+# MHD simulations
+**/MHD*
+
+# keras-tuner trials
+**/trial*
+
+# slurm logs
+**/slurm-*
